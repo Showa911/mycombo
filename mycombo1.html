@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MyCombo Split Calculator</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; max-width: 760px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input { width: 100%; padding: 10px; font-size: 16px; box-sizing: border-box; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    .btn { padding: 10px 14px; font-size: 16px; border-radius: 10px; border: 1px solid #333; background: #fff; cursor: pointer; }
+    .out { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; line-height: 1.35; }
+    .muted { color: #555; font-size: 14px; line-height: 1.35; }
+    .delta-pos { color: #0a7a28; font-weight: 700; } /* verde */
+    .delta-neg { color: #b00020; font-weight: 700; } /* rosso */
+    .delta-zero { color: #555; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Split Stake su 2 MyCombo</h1>
+  <p class="muted">
+    Inserisci stake totale e quote. Output: split stake (interi da 1€), quota equivalente conservativa e delta vs quota originale.
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <label for="stake">STAKE totale (€)</label>
+      <input id="stake" type="number" step="1" min="1" value="100" />
+
+      <label for="qNormal" style="margin-top:12px;">Quota giocata normale</label>
+      <input id="qNormal" type="number" step="0.01" min="1.01" value="1.70" />
+
+      <label for="qOver" style="margin-top:12px;">Quota MyCombo (normale + over)</label>
+      <input id="qOver" type="number" step="0.01" min="1.01" value="24.81" />
+
+      <label for="qUnder" style="margin-top:12px;">Quota MyCombo (normale + under)</label>
+      <input id="qUnder" type="number" step="0.01" min="1.01" value="1.89" />
+
+      <div class="row">
+        <button class="btn" id="calc">Calcola</button>
+        <button class="btn" id="reset">Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="out" id="output">Compila i campi e premi “Calcola”.</div>
+    </div>
+  </div>
+
+<script>
+function fmt4(x){ return (Math.round(x*10000)/10000).toFixed(4); }
+
+function calc() {
+  const T = Math.round(Number(document.getElementById('stake').value));
+  const qN = Number(document.getElementById('qNormal').value);
+  const qO = Number(document.getElementById('qOver').value);
+  const qU = Number(document.getElementById('qUnder').value);
+
+  if (!Number.isFinite(T) || T <= 0) {
+    return { text: "Stake non valido.", deltaClass: "delta-zero" };
+  }
+  if (![qN,qO,qU].every(Number.isFinite) || [qN,qO,qU].some(q => q <= 1)) {
+    return { text: "Quote non valide (devono essere > 1).", deltaClass: "delta-zero" };
+  }
+
+  // Cerca lo split migliore con stake interi (multipli di 1€):
+  // massimizza min(qU*SU, qO*SO) con SU+SO=T e SU,SO interi.
+  let bestSU = 0, bestSO = T, bestMinReturn = -Infinity, bestSpread = Infinity;
+
+  for (let SU = 0; SU <= T; SU++) {
+    const SO = T - SU;
+    const retU = qU * SU; // incasso se vince Under-combo
+    const retO = qO * SO; // incasso se vince Over-combo
+    const minRet = Math.min(retU, retO);
+    const spread = Math.abs(retU - retO);
+
+    // 1) massimizza minRet, 2) a parità minimizza spread
+    if (minRet > bestMinReturn + 1e-9 || (Math.abs(minRet - bestMinReturn) < 1e-9 && spread < bestSpread - 1e-9)) {
+      bestMinReturn = minRet;
+      bestSpread = spread;
+      bestSU = SU;
+      bestSO = SO;
+    }
+  }
+
+  // Quota equivalente conservativa = min incasso / stake
+  const qEff = bestMinReturn / T;
+  const delta = qEff - qN;
+
+  let deltaClass = "delta-zero";
+  if (delta > 0.00005) deltaClass = "delta-pos";
+  else if (delta < -0.00005) deltaClass = "delta-neg";
+
+  const text =
+`Stake: ${bestSU}€ (Under) + ${bestSO}€ (Over)
+Quota equivalente: ${fmt4(qEff)}
+Delta quota vs originale: ${fmt4(delta)}`;
+
+  return { text, deltaClass };
+}
+
+function render() {
+  const out = document.getElementById('output');
+  const res = calc();
+  out.textContent = res.text;
+
+  // Colora solo la riga del delta (ricostruisco HTML in modo sicuro)
+  const lines = res.text.split("\n");
+  if (lines.length === 3) {
+    const safe0 = lines[0].replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+    const safe1 = lines[1].replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+    const safe2 = lines[2].replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+    out.innerHTML = `${safe0}<br>${safe1}<br><span class="${res.deltaClass}">${safe2}</span>`;
+  } else {
+    out.className = "out";
+  }
+}
+
+document.getElementById('calc').addEventListener('click', render);
+document.getElementById('reset').addEventListener('click', () => {
+  document.getElementById('stake').value = 100;
+  document.getElementById('qNormal').value = 1.70;
+  document.getElementById('qOver').value = 24.81;
+  document.getElementById('qUnder').value = 1.89;
+  document.getElementById('output').textContent = "Compila i campi e premi “Calcola”.";
+});
+</script>
+</body>
+</html>
