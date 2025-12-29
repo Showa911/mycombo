@@ -21,23 +21,20 @@
 </head>
 <body>
   <h1>Split Stake su 2 MyCombo</h1>
-  <p class="muted">
-    Inserisci stake totale e quote. Output: split stake (interi da 1€), quota equivalente conservativa e delta vs quota originale.
-  </p>
 
   <div class="grid">
     <div class="card">
       <label for="stake">STAKE totale (€)</label>
       <input id="stake" type="number" step="1" min="1" value="100" />
 
-      <label for="qNormal" style="margin-top:12px;">Quota giocata normale</label>
-      <input id="qNormal" type="number" step="0.01" min="1.01" value="1.70" />
+      <label for="qNormal" style="margin-top:12px;">Quota giocata</label>
+      <input id="qNormal" type="number" step="0.01" min="1.01" value="1.00" />
 
-      <label for="qOver" style="margin-top:12px;">Quota MyCombo (normale + over)</label>
-      <input id="qOver" type="number" step="0.01" min="1.01" value="24.81" />
+      <label for="qOver" style="margin-top:12px;">Quota MyCombo over</label>
+      <input id="qOver" type="number" step="0.01" min="1.01" value="1.00" />
 
-      <label for="qUnder" style="margin-top:12px;">Quota MyCombo (normale + under)</label>
-      <input id="qUnder" type="number" step="0.01" min="1.01" value="1.89" />
+      <label for="qUnder" style="margin-top:12px;">Quota MyCombo under</label>
+      <input id="qUnder" type="number" step="0.01" min="1.01" value="1.00" />
 
       <div class="row">
         <button class="btn" id="calc">Calcola</button>
@@ -122,9 +119,9 @@ function render() {
 document.getElementById('calc').addEventListener('click', render);
 document.getElementById('reset').addEventListener('click', () => {
   document.getElementById('stake').value = 100;
-  document.getElementById('qNormal').value = 1.70;
-  document.getElementById('qOver').value = 24.81;
-  document.getElementById('qUnder').value = 1.89;
+  document.getElementById('qNormal').value = 1.00;
+  document.getElementById('qOver').value = 1.00;
+  document.getElementById('qUnder').value = 1.00;
   document.getElementById('output').textContent = "Compila i campi e premi “Calcola”.";
 });
 </script>
